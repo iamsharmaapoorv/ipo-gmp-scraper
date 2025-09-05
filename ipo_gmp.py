@@ -70,10 +70,11 @@ def main():
         gmp = cols[3]
         date_col = cols[4]
 
+        global test
         if not test:
             test=True
             send_alert(ipo_name)
-            
+
         last_date_str = get_last_date(date_col)
         last_date = normalize_date(last_date_str)
 
