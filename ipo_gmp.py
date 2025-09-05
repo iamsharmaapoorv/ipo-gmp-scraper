@@ -10,7 +10,6 @@ URL = "https://ipowatch.in/ipo-grey-market-premium-latest-ipo-gmp/"
 GAIN = 10
 
 telegram_alert = None
-test=False
 
 def get_last_date(date_str):
     parts = date_str.strip().split("-")
@@ -69,11 +68,6 @@ def main():
         ipo_name = cols[0]
         gmp = cols[3]
         date_col = cols[4]
-
-        global test
-        if not test:
-            test=True
-            send_alert(ipo_name)
 
         last_date_str = get_last_date(date_col)
         last_date = normalize_date(last_date_str)

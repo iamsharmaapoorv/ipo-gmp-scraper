@@ -2,7 +2,7 @@ name: Run IPO GMP Scraper
 
 on:
   schedule:
-    - cron: "*/5 * * * *"   # Every day at 6:30 UTC = 12:00 PM IST
+    - cron: "30 6 * * *"   # Every day at 6:30 UTC = 12:00 AM IST
   workflow_dispatch:       # Allow manual runs
 
 jobs:
