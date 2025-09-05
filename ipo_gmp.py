@@ -1,25 +1,24 @@
 import requests
+import os
+import logging
 from bs4 import BeautifulSoup
 from datetime import datetime
+from telegram_alert import TelegramAlert
+
 
 URL = "https://ipowatch.in/ipo-grey-market-premium-latest-ipo-gmp/"
+GAIN = 10
+
+telegram_alert = None
 
 def get_last_date(date_str):
-    """
-    Extracts the last date from strings like:
-    - '1-3 Sept' -> '3 Sept'
-    - '3 Sept' -> '3 Sept'
-    """
     parts = date_str.strip().split("-")
     if len(parts) == 2:
         return parts[1].strip()
     return parts[0].strip()
 
+
 def normalize_date(date_str):
-    """
-    Converts '1 Sept' or '1 September' → datetime object with current year
-    by normalizing month to its first 3 letters.
-    """
     current_year = datetime.now().year
     parts = date_str.split()
     if len(parts) != 2:
@@ -35,14 +34,27 @@ def normalize_date(date_str):
         return None
 
 
+def send_alert(message):
+    """Lazy load TelegramAlert and send a message."""
+    global telegram_alert
+    if telegram_alert is None:
+        bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+        chat_id = os.getenv("TELEGRAM_CHAT_ID")
+        if not bot_token or not chat_id:
+            logging.error("⚠️ Telegram credentials not set. Skipping alert.")
+            return
+        telegram_alert = TelegramAlert(bot_token=bot_token, chat_id=chat_id)
+    telegram_alert.send(message)
+
+
 def main():
     resp = requests.get(URL, headers={"User-Agent": "Mozilla/5.0"})
     soup = BeautifulSoup(resp.text, "html.parser")
 
-    # Find table
     table = soup.find("table")
     if not table:
-        print("No table found on page")
+        logging.error(f"No table found on page {URL}")
+        send_alert(f"No table found on page {URL}")
         return
 
     rows = table.find_all("tr")
@@ -57,26 +69,23 @@ def main():
         gmp = cols[3]
         date_col = cols[4]
 
-        # print(f"{ipo_name} {gmp} {date_col}")
-
         last_date_str = get_last_date(date_col)
         last_date = normalize_date(last_date_str)
-
-        # print(f"{last_date_str} {last_date} ")
 
         if not last_date:
             continue
 
-        # Check if last date matches today
         if last_date.date() == today:
-            # Extract % gain (e.g. "12%" -> 12)
             if "%" in gmp:
                 try:
                     gain = int(gmp.replace("%", "").strip())
-                    if gain >= 10:
-                        print(f"{ipo_name} | Gain: {gain}%")
+                    if gain >= GAIN:
+                        message = f"{ipo_name} | Gain: {gain}%"
+                        logging.info(message)
+                        send_alert(message)
                 except ValueError:
                     continue
+
 
 if __name__ == "__main__":
     main()
